@@ -1,0 +1,572 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User and Auth Roles
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  passwordHash       String
+  mfaSecret          String?
+  mfaEnabled         Boolean            @default(false)
+  status             UserStatus         @default(ACTIVE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  roleId             String
+  role               Role               @relation(fields: [roleId], references: [id])
+  
+  profile            Profile?
+  anonymousProfiles  AnonymousProfile[]
+  
+  // Author relations
+  posts              Post[]
+  comments           Comment[]
+  votes              Vote[]
+  reactions          Reaction[]
+  pollVotes          PollVote[]
+  
+  // Ticket relations
+  submittedTickets   Ticket[]           @relation("StudentTickets")
+  assignedTickets    Ticket[]           @relation("AssigneeTickets")
+  
+  reports            Report[]           @relation("ReporterRelation")
+  resolvedReports    Report[]           @relation("ResolverRelation")
+  auditLogs          AuditLog[]
+  
+  // Community relations
+  clubMemberships    ClubMember[]
+  createdClubs       Club[]             @relation("ClubCreator")
+  createdEvents      Event[]            @relation("EventCreator")
+  rsvps              EventRSVP[]
+  marketplaceItems   MarketplaceItem[]
+  notifications      Notification[]
+  
+  sentMessages       Message[]          @relation("MessageSender")
+  receivedMessages   Message[]          @relation("MessageReceiver")
+  channelMemberships ChannelMember[]
+
+  @@index([email])
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Role {
+  id          String             @id @default(uuid())
+  name        String             @unique // STUDENT, MODERATOR, FACULTY, DEPT_ADMIN, UNIV_ADMIN, SUPER_ADMIN
+  description String?
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String             @id @default(uuid())
+  name        String             @unique // e.g. "post:delete", "ticket:resolve", "user:suspend"
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// Profile details
+
+model Profile {
+  id           String      @id @default(uuid())
+  userId       String      @unique
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName    String
+  lastName     String
+  avatarUrl    String?
+  echoScore    Int         @default(0)
+  
+  universityId String
+  university   University  @relation(fields: [universityId], references: [id])
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  programId    String?
+  program      Program?    @relation(fields: [programId], references: [id])
+  batchId      String?
+  batch        Batch?      @relation(fields: [batchId], references: [id])
+  classId      String?
+  class        Class?      @relation(fields: [classId], references: [id])
+}
+
+model AnonymousProfile {
+  id           String      @id @default(uuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alias        String      @unique
+  avatarUrl    String?
+  createdAt    DateTime    @default(now())
+  posts        Post[]
+  comments     Comment[]
+  messages     Message[]
+
+  @@index([userId])
+}
+
+// University Hierarchy
+
+model University {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  domain           String            @unique
+  createdAt        DateTime          @default(now())
+  departments      Department[]
+  profiles         Profile[]
+  posts            Post[]
+  clubs            Club[]
+  events           Event[]
+  marketplaceItems MarketplaceItem[]
+  tickets          Ticket[]
+}
+
+model Department {
+  id           String     @id @default(uuid())
+  name         String
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  programs     Program[]
+  profiles     Profile[]
+  posts        Post[]
+  channels     Channel[]
+  tickets      Ticket[]
+
+  @@unique([name, universityId])
+}
+
+model Program {
+  id           String     @id @default(uuid())
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  batches      Batch[]
+  profiles     Profile[]
+
+  @@unique([name, departmentId])
+}
+
+model Batch {
+  id        String    @id @default(uuid())
+  name      String // e.g. "Batch of 2026"
+  programId String
+  program   Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
+  classes   Class[]
+  profiles  Profile[]
+
+  @@unique([name, programId])
+}
+
+model Class {
+  id       String    @id @default(uuid())
+  name     String // e.g. "Class A"
+  batchId  String
+  batch    Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  profiles Profile[]
+
+  @@unique([name, batchId])
+}
+
+// Feed & Post Engine
+
+model Post {
+  id                 String            @id @default(uuid())
+  title              String
+  content            String
+  anonymous          Boolean           @default(false)
+  
+  authorId           String
+  author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  anonymousProfileId String?
+  anonymousProfile   AnonymousProfile? @relation(fields: [anonymousProfileId], references: [id])
+  
+  universityId       String
+  university         University        @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departmentId       String?
+  department         Department?       @relation(fields: [departmentId], references: [id])
+  
+  category           PostCategory      @default(FEED)
+  postType           PostType          @default(TEXT)
+  mediaUrls          String[]          @default([])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  
+  poll               Poll?
+  comments           Comment[]
+  votes              Vote[]
+  reactions          Reaction[]
+  reports            Report[]
+
+  @@index([authorId])
+  @@index([universityId])
+  @@index([category])
+}
+
+enum PostCategory {
+  FEED
+  ANNOUNCEMENT
+  CLUBS
+}
+
+enum PostType {
+  TEXT
+  IMAGE
+  POLL
+  DOCUMENT
+}
+
+model Poll {
+  id        String       @id @default(uuid())
+  question  String
+  expiresAt DateTime
+  postId    String       @unique
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  options   PollOption[]
+}
+
+model PollOption {
+  id     String     @id @default(uuid())
+  text   String
+  pollId String
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes  PollVote[]
+}
+
+model PollVote {
+  id       String     @id @default(uuid())
+  optionId String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, userId])
+}
+
+model Vote {
+  id     String   @id @default(uuid())
+  postId String
+  post   Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type   VoteType
+
+  @@unique([postId, userId])
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+
+  @@index([postId])
+  @@index([commentId])
+}
+
+model Comment {
+  id                 String            @id @default(uuid())
+  content            String
+  postId             String
+  post               Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  authorId           String
+  author             User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  anonymousProfileId String?
+  anonymousProfile   AnonymousProfile? @relation(fields: [anonymousProfileId], references: [id])
+  
+  parentId           String?
+  parent             Comment?          @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies            Comment[]         @relation("CommentReplies")
+  
+  reactions          Reaction[]
+  reports            Report[]
+  pinned             Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([postId])
+  @@index([parentId])
+}
+
+// Issue / Ticket Management
+
+model Ticket {
+  id            String       @id @default(uuid())
+  title         String
+  description   String
+  category      String
+  status        TicketStatus @default(SUBMITTED)
+  severity      Severity     @default(LOW)
+  
+  studentId     String
+  student       User         @relation("StudentTickets", fields: [studentId], references: [id], onDelete: Cascade)
+  assigneeId    String?
+  assignee      User?        @relation("AssigneeTickets", fields: [assigneeId], references: [id])
+  
+  universityId  String
+  university    University   @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departmentId  String?
+  department    Department?  @relation(fields: [departmentId], references: [id])
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  reports       Report[]
+  logs          AuditLog[]
+
+  @@index([studentId])
+  @@index([assigneeId])
+  @@index([universityId])
+}
+
+enum TicketStatus {
+  SUBMITTED
+  REVIEW
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// Moderation & Reports
+
+model Report {
+  id         String       @id @default(uuid())
+  reason     String
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  
+  reporterId String
+  reporter   User         @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolverId String?
+  resolver   User?        @relation("ResolverRelation", fields: [resolverId], references: [id])
+  
+  postId     String?
+  post       Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId  String?
+  comment    Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  ticketId   String?
+  ticket     Ticket?      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([commentId])
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+// Audit Logs
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  details   String?
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Clubs, Events & Marketplace
+
+model Club {
+  id           String       @id @default(uuid())
+  name         String
+  description  String
+  logoUrl      String?
+  universityId String
+  university   University   @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      User         @relation("ClubCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  members      ClubMember[]
+  events       Event[]
+  channels     Channel[]
+}
+
+model ClubMember {
+  id        String     @id @default(uuid())
+  clubId    String
+  club      Club       @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ClubRole   @default(MEMBER)
+  createdAt DateTime   @default(now())
+
+  @@unique([clubId, userId])
+}
+
+enum ClubRole {
+  MEMBER
+  LEADER
+  ADMIN
+}
+
+model Event {
+  id           String      @id @default(uuid())
+  title        String
+  description  String
+  date         DateTime
+  location     String
+  qrCodeUrl    String?
+  clubId       String?
+  club         Club?       @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  universityId String
+  university   University  @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      User        @relation("EventCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  rsvps        EventRSVP[]
+}
+
+model EventRSVP {
+  id          String    @id @default(uuid())
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkedIn   Boolean   @default(false)
+  checkedInAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model MarketplaceItem {
+  id           String               @id @default(uuid())
+  title        String
+  description  String
+  price        Float
+  condition    ItemCondition
+  imageUrl     String?
+  sellerId     String
+  seller       User                 @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  universityId String
+  university   University           @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  status       MarketplaceStatus    @default(AVAILABLE)
+  createdAt    DateTime             @default(now())
+}
+
+enum ItemCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+}
+
+enum MarketplaceStatus {
+  AVAILABLE
+  SOLD
+}
+
+// Notifications
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  type      NotificationType
+  link      String?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+}
+
+enum NotificationType {
+  INFO
+  TICKET
+  FEED
+  REACTION
+  CHAT
+}
+
+// Messaging and Channels
+
+model Channel {
+  id           String          @id @default(uuid())
+  name         String? // Null for DM
+  type         ChannelType     @default(PUBLIC)
+  clubId       String?
+  club         Club?           @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  departmentId String?
+  department   Department?     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime        @default(now())
+  messages     Message[]
+  members      ChannelMember[]
+}
+
+enum ChannelType {
+  PUBLIC
+  PRIVATE
+  DIRECT
+}
+
+model ChannelMember {
+  id        String   @id @default(uuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([channelId, userId])
+}
+
+model Message {
+  id                 String            @id @default(uuid())
+  content            String
+  channelId          String
+  channel            Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  
+  senderId           String
+  sender             User              @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  anonymous          Boolean           @default(false)
+  anonymousProfileId String?
+  anonymousProfile   AnonymousProfile? @relation(fields: [anonymousProfileId], references: [id])
+  
+  recipientId        String?
+  recipient          User?             @relation("MessageReceiver", fields: [recipientId], references: [id])
+  createdAt          DateTime          @default(now())
+
+  @@index([channelId])
+}
