@@ -7,8 +7,8 @@ export declare class PostsController {
     constructor(postsService: PostsService, prisma: PrismaService);
     create(userId: string, dto: CreatePostDto): Promise<({
         anonymousProfile: {
-            alias: string;
             avatarUrl: string | null;
+            alias: string;
         } | null;
         poll: ({
             options: {
@@ -30,18 +30,18 @@ export declare class PostsController {
         };
     } & {
         id: string;
+        createdAt: Date;
+        universityId: string;
+        departmentId: string | null;
+        updatedAt: Date;
         title: string;
         content: string;
         anonymous: boolean;
+        category: import("@prisma/client").$Enums.PostCategory;
+        mediaUrls: string[];
         authorId: string;
         anonymousProfileId: string | null;
-        universityId: string;
-        departmentId: string | null;
-        category: import("@prisma/client").$Enums.PostCategory;
         postType: import("@prisma/client").$Enums.PostType;
-        mediaUrls: string[];
-        createdAt: Date;
-        updatedAt: Date;
     }) | null>;
     getFeed(userId: string, algorithm?: string, category?: string): Promise<{
         id: any;
@@ -76,25 +76,25 @@ export declare class PostsController {
     }>;
     addComment(userId: string, postId: string, dto: CreateCommentDto): Promise<({
         anonymousProfile: {
-            alias: string;
             avatarUrl: string | null;
+            alias: string;
         } | null;
         author: {
             profile: {
-                avatarUrl: string | null;
                 firstName: string;
                 lastName: string;
+                avatarUrl: string | null;
             } | null;
         };
     } & {
         id: string;
-        content: string;
-        authorId: string;
-        anonymousProfileId: string | null;
         createdAt: Date;
         updatedAt: Date;
-        postId: string;
+        content: string;
         parentId: string | null;
+        postId: string;
+        authorId: string;
+        anonymousProfileId: string | null;
         pinned: boolean;
     }) | null>;
     getComments(postId: string): Promise<any[]>;
