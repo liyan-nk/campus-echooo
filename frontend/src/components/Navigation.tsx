@@ -34,7 +34,7 @@ export default function Navigation() {
     { label: "Tickets", href: "/tickets", icon: Ticket },
     { label: "Clubs", href: "/clubs", icon: Users },
     { label: "Events", href: "/events", icon: Calendar },
-    { label: "Market", href: "/marketplace", icon: ShoppingBag },
+    //{ label: "Market", href: "/marketplace", icon: ShoppingBag },
     { label: "Mod", href: "/moderation", icon: ShieldAlert, roles: ["MODERATOR", "SUPER_ADMIN", "UNIV_ADMIN"] },
   ];
 

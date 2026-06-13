@@ -11,6 +11,7 @@ import {
   Briefcase, 
   EyeOff, 
   Info,
+  Clock,
   LogOut
 } from "lucide-react";
 import { motion } from "framer-motion";

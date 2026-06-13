@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
-import { Calendar, Plus, MapPin, CheckCircle, QRcode, QrCode } from "lucide-react";
+import { Calendar, Plus, MapPin, CheckCircle, QrCode } from "lucide-react";
 
 interface Event {
   id: string;
