@@ -7,8 +7,8 @@ export declare class PostsController {
     constructor(postsService: PostsService, prisma: PrismaService);
     create(userId: string, dto: CreatePostDto): Promise<({
         anonymousProfile: {
-            avatarUrl: string | null;
             alias: string;
+            avatarUrl: string | null;
         } | null;
         poll: ({
             options: {
@@ -30,18 +30,18 @@ export declare class PostsController {
         };
     } & {
         id: string;
-        createdAt: Date;
-        universityId: string;
-        departmentId: string | null;
-        updatedAt: Date;
         title: string;
         content: string;
         anonymous: boolean;
-        category: import("@prisma/client").$Enums.PostCategory;
-        mediaUrls: string[];
         authorId: string;
         anonymousProfileId: string | null;
+        universityId: string;
+        departmentId: string | null;
+        category: import("@prisma/client").$Enums.PostCategory;
         postType: import("@prisma/client").$Enums.PostType;
+        mediaUrls: string[];
+        createdAt: Date;
+        updatedAt: Date;
     }) | null>;
     getFeed(userId: string, algorithm?: string, category?: string): Promise<{
         id: any;
@@ -76,29 +76,66 @@ export declare class PostsController {
     }>;
     addComment(userId: string, postId: string, dto: CreateCommentDto): Promise<({
         anonymousProfile: {
-            avatarUrl: string | null;
             alias: string;
+            avatarUrl: string | null;
         } | null;
         author: {
             profile: {
+                avatarUrl: string | null;
                 firstName: string;
                 lastName: string;
-                avatarUrl: string | null;
             } | null;
         };
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         content: string;
-        parentId: string | null;
-        postId: string;
         authorId: string;
         anonymousProfileId: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        postId: string;
+        parentId: string | null;
         pinned: boolean;
     }) | null>;
     getComments(postId: string): Promise<any[]>;
     pinComment(userId: string, commentId: string): Promise<{
+        success: boolean;
+    }>;
+    updatePost(userId: string, postId: string, body: {
+        title?: string;
+        content?: string;
+    }): Promise<{
+        id: string;
+        title: string;
+        content: string;
+        anonymous: boolean;
+        authorId: string;
+        anonymousProfileId: string | null;
+        universityId: string;
+        departmentId: string | null;
+        category: import("@prisma/client").$Enums.PostCategory;
+        postType: import("@prisma/client").$Enums.PostType;
+        mediaUrls: string[];
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deletePost(userId: string, postId: string): Promise<{
+        success: boolean;
+    }>;
+    updateComment(userId: string, commentId: string, body: {
+        content: string;
+    }): Promise<{
+        id: string;
+        content: string;
+        authorId: string;
+        anonymousProfileId: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        postId: string;
+        parentId: string | null;
+        pinned: boolean;
+    }>;
+    deleteComment(userId: string, commentId: string): Promise<{
         success: boolean;
     }>;
 }

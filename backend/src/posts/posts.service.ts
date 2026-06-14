@@ -422,7 +422,7 @@ export class PostsService {
       include: { role: true },
     });
 
-    if (!user || !["SUPER_ADMIN", "FACULTY", "UNIV_ADMIN"].includes(user.role.name)) {
+    if (!user || !["SUPER_ADMIN", "FACULTY", "CLASS_MODERATOR"].includes(user.role.name)) {
       throw new ForbiddenException("Only official staff or admins can pin comments");
     }
 
@@ -433,4 +433,110 @@ export class PostsService {
 
     return { success: true };
   }
+
+  async updatePost(
+    userId: string,
+    postId: string,
+    data: { title?: string; content?: string },
+  ) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException("Post not found");
+    }
+
+    if (post.authorId !== userId) {
+      throw new ForbiddenException("You can only edit your own posts");
+    }
+
+    return this.prisma.post.update({
+      where: { id: postId },
+      data,
+    });
+  }
+
+  async deletePost(userId: string, postId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true },
+    });
+
+    const isOwner = post.authorId === userId;
+    const isStaff =
+      user &&
+      ['SUPER_ADMIN', 'FACULTY', 'CLASS_MODERATOR'].includes(user.role.name);
+
+    if (!isOwner && !isStaff) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    await this.prisma.post.delete({
+      where: { id: postId },
+    });
+
+    return { success: true };
+  }
+
+  async updateComment(
+  userId: string,
+  commentId: string,
+  content: string,
+) {
+  const comment = await this.prisma.comment.findUnique({
+    where: { id: commentId },
+  });
+
+  if (!comment) {
+    throw new NotFoundException('Comment not found');
+  }
+
+  if (comment.authorId !== userId) {
+    throw new ForbiddenException('You can only edit your own comments');
+  }
+
+  return this.prisma.comment.update({
+    where: { id: commentId },
+    data: { content },
+  });
+}
+
+async deleteComment(userId: string, commentId: string) {
+  const comment = await this.prisma.comment.findUnique({
+    where: { id: commentId },
+  });
+
+  if (!comment) {
+    throw new NotFoundException('Comment not found');
+  }
+
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    include: { role: true },
+  });
+
+  const isOwner = comment.authorId === userId;
+  const isStaff =
+    user &&
+    ['SUPER_ADMIN', 'FACULTY', 'CLASS_MODERATOR'].includes(user.role.name);
+
+  if (!isOwner && !isStaff) {
+    throw new ForbiddenException('Not allowed');
+  }
+
+  await this.prisma.comment.delete({
+    where: { id: commentId },
+  });
+
+  return { success: true };
+}
 }

@@ -3,6 +3,7 @@ import { PostsService } from "./posts.service";
 import { CreatePostDto, CreateCommentDto, VotePostDto } from "./dto/posts.dto";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { PrismaService } from "../prisma/prisma.service";
+import { Patch, Delete } from "@nestjs/common";
 
 @Controller("posts")
 export class PostsController {
@@ -71,4 +72,38 @@ export class PostsController {
   ) {
     return this.postsService.pinComment(userId, commentId);
   }
-}
+
+  @Patch(":id")
+  async updatePost(
+    @CurrentUser("userId") userId: string,
+    @Param("id") postId: string,
+    @Body() body: { title?: string; content?: string },
+  ) {
+    return this.postsService.updatePost(userId, postId, body);
+  }
+
+  @Delete(":id")
+  async deletePost(
+    @CurrentUser("userId") userId: string,
+    @Param("id") postId: string,
+  ) {
+    return this.postsService.deletePost(userId, postId);
+  }
+
+  @Patch("comments/:id")
+  async updateComment(
+    @CurrentUser("userId") userId: string,
+    @Param("id") commentId: string,
+    @Body() body: { content: string },
+  ) {
+    return this.postsService.updateComment(userId, commentId, body.content);
+  }
+
+  @Delete("comments/:id")
+  async deleteComment(
+    @CurrentUser("userId") userId: string,
+    @Param("id") commentId: string,
+  ) {
+    return this.postsService.deleteComment(userId, commentId);
+  }
+  }

@@ -366,12 +366,86 @@ let PostsService = class PostsService {
             where: { id: userId },
             include: { role: true },
         });
-        if (!user || !["SUPER_ADMIN", "FACULTY", "UNIV_ADMIN"].includes(user.role.name)) {
+        if (!user || !["SUPER_ADMIN", "FACULTY", "CLASS_MODERATOR"].includes(user.role.name)) {
             throw new common_1.ForbiddenException("Only official staff or admins can pin comments");
         }
         await this.prisma.comment.update({
             where: { id: commentId },
             data: { pinned: true },
+        });
+        return { success: true };
+    }
+    async updatePost(userId, postId, data) {
+        const post = await this.prisma.post.findUnique({
+            where: { id: postId },
+        });
+        if (!post) {
+            throw new common_1.NotFoundException("Post not found");
+        }
+        if (post.authorId !== userId) {
+            throw new common_1.ForbiddenException("You can only edit your own posts");
+        }
+        return this.prisma.post.update({
+            where: { id: postId },
+            data,
+        });
+    }
+    async deletePost(userId, postId) {
+        const post = await this.prisma.post.findUnique({
+            where: { id: postId },
+        });
+        if (!post) {
+            throw new common_1.NotFoundException('Post not found');
+        }
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { role: true },
+        });
+        const isOwner = post.authorId === userId;
+        const isStaff = user &&
+            ['SUPER_ADMIN', 'FACULTY', 'CLASS_MODERATOR'].includes(user.role.name);
+        if (!isOwner && !isStaff) {
+            throw new common_1.ForbiddenException('Not allowed');
+        }
+        await this.prisma.post.delete({
+            where: { id: postId },
+        });
+        return { success: true };
+    }
+    async updateComment(userId, commentId, content) {
+        const comment = await this.prisma.comment.findUnique({
+            where: { id: commentId },
+        });
+        if (!comment) {
+            throw new common_1.NotFoundException('Comment not found');
+        }
+        if (comment.authorId !== userId) {
+            throw new common_1.ForbiddenException('You can only edit your own comments');
+        }
+        return this.prisma.comment.update({
+            where: { id: commentId },
+            data: { content },
+        });
+    }
+    async deleteComment(userId, commentId) {
+        const comment = await this.prisma.comment.findUnique({
+            where: { id: commentId },
+        });
+        if (!comment) {
+            throw new common_1.NotFoundException('Comment not found');
+        }
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { role: true },
+        });
+        const isOwner = comment.authorId === userId;
+        const isStaff = user &&
+            ['SUPER_ADMIN', 'FACULTY', 'CLASS_MODERATOR'].includes(user.role.name);
+        if (!isOwner && !isStaff) {
+            throw new common_1.ForbiddenException('Not allowed');
+        }
+        await this.prisma.comment.delete({
+            where: { id: commentId },
         });
         return { success: true };
     }
