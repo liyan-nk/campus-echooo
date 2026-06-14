@@ -260,22 +260,17 @@ export default function FeedPage() {
                           ? "bg-dark-hover border border-dark-border text-text-secondary" 
                           : "bg-brand-primary/10 border border-brand-primary/20 text-brand-primary"
                       }`}>
-                        {post.anonymous ? "A" : post.author.name?.[0]}
+                        {post.author.alias?.[0]?.toUpperCase() || "A"}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-white">
-                            {post.anonymous ? post.author.alias : post.author.name}
+                            {post.author.alias || "Anonymous Student"}
                           </span>
-                          {post.anonymous ? (
-                            <span className="flex items-center gap-0.5 text-[9px] font-bold text-text-muted px-1.5 py-0.5 rounded bg-dark-hover border border-dark-border uppercase tracking-wider">
-                              <EyeOff className="w-2.5 h-2.5" /> Anon
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-0.5 text-[9px] font-bold text-brand-accent px-1.5 py-0.5 rounded bg-brand-primary/5 border border-brand-primary/10 uppercase tracking-wider">
-                              <UserCheck className="w-2.5 h-2.5" /> Verified ({post.author.role})
-                            </span>
-                          )}
+                          <span className="flex items-center gap-0.5 text-[9px] font-bold text-text-muted px-1.5 py-0.5 rounded bg-dark-hover border border-dark-border uppercase tracking-wider">
+                            <EyeOff className="w-2.5 h-2.5" />
+                            Anonymous
+                          </span>
                         </div>
                         <p className="text-[10px] text-text-muted flex items-center gap-1 mt-0.5">
                           <Clock className="w-3 h-3" />
